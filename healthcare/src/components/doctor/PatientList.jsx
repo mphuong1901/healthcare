@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Eye, MessageSquare, Phone, Mail, User, Loader2 } from 'lucide-react';
 import { userAPI, doctorAPI } from '../../services/api';
 import { toast } from 'react-hot-toast';
@@ -18,7 +18,7 @@ const PatientList = () => {
   const [isSending, setIsSending] = useState(false);
   const limit = 10;
 
-  // Fetch patients from API
+  // Fetch patients (chỉ call API khi đổi page, KHÔNG phụ thuộc searchTerm nữa)
   useEffect(() => {
     const fetchPatients = async () => {
       try {
@@ -37,53 +37,48 @@ const PatientList = () => {
     };
 
     fetchPatients();
-  }, [searchTerm, currentPage]);
+  }, [currentPage]);
 
-  // Debounced search
-  useEffect(() => {
-    const debounce = setTimeout(() => {
-      if (currentPage !== 1) {
-        setCurrentPage(1);
+  // Filter + search patients ở client
+  const filteredPatients = useMemo(() => {
+    return patients
+      .filter((patient) => {
+        // filter theo trạng thái
+        if (filterStatus === 'active') return patient.isActive;
+        if (filterStatus === 'inactive') return !patient.isActive;
+        return true;
+      })
+      .filter((patient) => {
+        if (!searchTerm.trim()) return true;
+        const keyword = searchTerm.toLowerCase();
+        return (
+          (patient.fullName && patient.fullName.toLowerCase().includes(keyword)) ||
+          (patient.email && patient.email.toLowerCase().includes(keyword)) ||
+          (patient.phoneNumber && patient.phoneNumber.includes(keyword))
+        );
+      });
+  }, [patients, filterStatus, searchTerm]);
+
+  // Sort
+  const sortedPatients = useMemo(() => {
+    return [...filteredPatients].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.fullName.localeCompare(b.fullName);
+        case 'age':
+          return (a.age || 0) - (b.age || 0);
+        case 'createdAt':
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        default:
+          return 0;
       }
-    }, 500);
+    });
+  }, [filteredPatients, sortBy]);
 
-    return () => clearTimeout(debounce);
-  }, [searchTerm]);
-
-  const getStatusBadge = (isActive) => {
-    const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium';
-    if (isActive) {
-      return `${baseClasses} bg-green-100 text-green-800`;
-    }
-    return `${baseClasses} bg-gray-100 text-gray-800`;
-  };
-
-  const filteredPatients = patients.filter(patient => {
-    if (filterStatus === 'all') return true;
-    if (filterStatus === 'active') return patient.isActive;
-    if (filterStatus === 'inactive') return !patient.isActive;
-    return true;
-  });
-
-  const sortedPatients = [...filteredPatients].sort((a, b) => {
-    switch (sortBy) {
-      case 'name':
-        return a.fullName.localeCompare(b.fullName);
-      case 'age':
-        return (a.age || 0) - (b.age || 0);
-      case 'createdAt':
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      default:
-        return 0;
-    }
-  });
-
-// Sửa lại hàm này
   const handleViewPatient = (patient) => {
     toast(`Xem chi tiết bệnh nhân: ${patient.fullName}`, { icon: "ℹ️" });
-    setViewPatient(patient); 
+    setViewPatient(patient);
   };
-  
 
   const handleSendMessage = (patient) => {
     setSelectedPatient(patient);
@@ -223,7 +218,7 @@ const PatientList = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={getStatusBadge(patient.isActive)}>
+                      <span className={patient.isActive ? "px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800" : "px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"}>
                         {patient.isActive ? 'Hoạt động' : 'Không hoạt động'}
                       </span>
                     </td>
@@ -313,6 +308,7 @@ const PatientList = () => {
           </div>
         </div>
       )}
+
       {/* Modal xem chi tiết bệnh nhân */}
       {viewPatient && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
@@ -338,7 +334,6 @@ const PatientList = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
