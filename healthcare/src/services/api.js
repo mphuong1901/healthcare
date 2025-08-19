@@ -43,8 +43,11 @@ const userAPI = {
 
   getAllUsers: (search = "", role = "", page = 1, limit = 10) =>
     api.get(`/users?search=${search}&role=${role}&page=${page}&limit=${limit}`),
-  getPendingDoctors: () => api.get("/users/pending-doctors"),
+
+  getPendingDoctors: (page = 1, limit = 10) =>
+    api.get(`/users/pending-doctors?page=${page}&limit=${limit}`),
   approveDoctor: (id) => api.put(`/users/${id}/approve`),
+  rejectDoctor: (id) => api.put(`/users/${id}/reject`),
 };
 
 // --------- Patient API ----------

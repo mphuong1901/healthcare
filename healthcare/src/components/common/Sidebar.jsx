@@ -25,7 +25,7 @@ const Sidebar = () => {
       case 'patient':
         return [
           { icon: Home, label: 'Trang chủ', path: '/patient' },
-          { icon: FileText, label: 'Nhật ký sức khỏe', path: '/patient/health-log' },
+          { icon: FileText, label: 'Nhật ký sức khỏe', path: '/patient/healthLog' },
           { icon: HelpCircle, label: 'Câu hỏi sức khỏe', path: '/patient/questions' },
           { icon: Activity, label: 'Lời khuyên từ bác sĩ', path: '/patient/advice' },
           { icon: Settings, label: 'Tài khoản cá nhân', path: '/patient/profile' },

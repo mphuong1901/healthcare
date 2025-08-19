@@ -62,32 +62,29 @@ export const register = async (req, res) => {
   }
 };
 
-// Đăng nhập (debug version)
+// Đăng nhập
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log("=== Login attempt ===");
-    console.log("Email from frontend:", email);
-    console.log("Password from frontend:", password);
+    console.log("=== Login attempt ===", email);
 
     const user = await User.findOne({ email: email.trim().toLowerCase() }).select("+password");
 
     if (!user) {
-      console.log("User not found in DB");
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    console.log("User found:", {
-      email: user.email,
-      hashedPassword: user.password
-    });
-
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log("Password match:", isMatch);
-
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // 🚨 Chặn bác sĩ chưa duyệt
+    if (user.role === "doctor" && !user.isApproved) {
+      return res.status(403).json({ 
+        message: "Tài khoản bác sĩ chưa được admin duyệt. Vui lòng chờ." 
+      });
     }
 
     user.lastLogin = new Date();
@@ -100,6 +97,7 @@ export const login = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        isApproved: user.isApproved,
       },
     });
   } catch (err) {
@@ -107,6 +105,7 @@ export const login = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 
 

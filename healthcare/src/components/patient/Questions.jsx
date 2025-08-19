@@ -4,6 +4,7 @@ import { questionAPI } from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { userAPI } from '../../services/api'; // Import userAPI
 
 const Questions = () => {
   const { currentUser } = useAuth();
@@ -12,7 +13,8 @@ const Questions = () => {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
-    category: 'general'
+    category: 'general',
+    doctor: '' // Add doctor field to formData
   });
 
   const [questions, setQuestions] = useState([]);
@@ -21,6 +23,8 @@ const Questions = () => {
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [doctors, setDoctors] = useState([]); // New state for doctors
+  const [fetchingDoctors, setFetchingDoctors] = useState(true); // New state for fetching doctors
 
   const categories = {
     general: 'Tổng quát',
@@ -80,6 +84,26 @@ const Questions = () => {
     fetchQuestions();
   }, [currentUser, currentPage]);
 
+  // Fetch doctors from API
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        setFetchingDoctors(true);
+        const response = await userAPI.getDoctors();
+        if (response?.data) {
+          setDoctors(response.data.doctors || []);
+        }
+      } catch (err) {
+        console.error('Error fetching doctors:', err);
+        toast.error('Không thể tải danh sách bác sĩ.');
+      } finally {
+        setFetchingDoctors(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -108,7 +132,8 @@ const Questions = () => {
         setFormData({
           title: '',
           content: '',
-          category: 'general'
+          category: 'general',
+          doctor: '' // Reset doctor field
         });
         setShowAddForm(false);
       }
@@ -230,6 +255,27 @@ const Questions = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Chọn Bác sĩ (Tùy chọn)
+                </label>
+                <select
+                  name="doctor"
+                  value={formData.doctor}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  disabled={submitting || fetchingDoctors}
+                >
+                  <option value="">-- Chọn bác sĩ --</option>
+                  {doctors.map((doc) => (
+                    <option key={doc._id} value={doc._id}>
+                      {doc.name} ({doc.specialization || 'Chưa xác định'})
+                    </option>
+                  ))}
+                </select>
+                {fetchingDoctors && <p className="text-sm text-gray-500 mt-1">Đang tải danh sách bác sĩ...</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nội dung câu hỏi
                 </label>
                 <textarea
@@ -311,41 +357,52 @@ const Questions = () => {
                 <p className="text-gray-700">{question.content}</p>
               </div>
 
-              {question.answer && (
-                <div className="border-l-4 border-primary-500 pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageSquare className="h-4 w-4 text-primary-600" />
-                    <span className="text-sm font-medium text-primary-600">Trả lời từ bác sĩ:</span>
-                  </div>
-                  {typeof question.answer === 'string' ? (
-                    <p className="text-gray-700">{question.answer}</p>
-                  ) : (
-                    <>
-                      <p className="text-gray-700">**Khuyến nghị:** {question.answer.recommendations}</p>
-                      {question.answer.followUpRequired && (
-                        <p className="text-gray-700">**Cần theo dõi thêm:** {question.answer.followUpRequired ? 'Có' : 'Không'}</p>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-              {question.answer && (
-                <div className="mt-2 p-2 bg-gray-100 rounded-md">
-                    <h4 className="font-semibold text-gray-800">Trả lời từ Bác sĩ:</h4>
+                {question.answer && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-primary-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MessageSquare className="h-5 w-5 text-primary-600" />
+                      <span className="text-sm font-semibold text-primary-700">
+                        Trả lời từ Bác sĩ
+                      </span>
+                    </div>
+                
+                    {/* Nếu answer là object */}
                     {typeof question.answer === 'object' ? (
-                        <>
-                            {question.answer.recommendations && (
-                                <p className="text-gray-700"><strong>Khuyến nghị:</strong> {question.answer.recommendations}</p>
-                            )}
-                            {question.answer.followUpRequired !== undefined && (
-                                <p className="text-gray-700"><strong>Cần theo dõi thêm:</strong> {question.answer.followUpRequired ? 'Có' : 'Không'}</p>
-                            )}
-                        </>
+                      <div className="space-y-2 text-gray-700">
+                        {question.answer.content && (
+                          <p><strong>Nội dung:</strong> {question.answer.content}</p>
+                        )}
+                        {question.answer.recommendations?.length > 0 && (
+                          <p>
+                            <strong>Khuyến nghị:</strong>{" "}
+                            {question.answer.recommendations.join(", ")}
+                          </p>
+                        )}
+                        {question.answer.followUpRequired !== undefined && (
+                          <p>
+                            <strong>Cần theo dõi thêm:</strong>{" "}
+                            {question.answer.followUpRequired ? "Có" : "Không"}
+                          </p>
+                        )}
+                        {question.answer.followUpDate && (
+                          <p>
+                            <strong>Ngày hẹn theo dõi:</strong>{" "}
+                            {new Date(question.answer.followUpDate).toLocaleDateString("vi-VN")}
+                          </p>
+                        )}
+                        {question.answer.answeredAt && (
+                          <p className="text-sm text-gray-500">
+                            (Trả lời vào ngày{" "}
+                            {new Date(question.answer.answeredAt).toLocaleDateString("vi-VN")})
+                          </p>
+                        )}
+                      </div>
                     ) : (
-                        <p className="text-gray-700">{question.answer}</p>
+                      // Nếu answer chỉ là string
+                      <p className="text-gray-700">{question.answer}</p>
                     )}
-                </div>
-              )}
+                  </div>
+                )}
             </div>
           ))
         ) : (

@@ -209,14 +209,34 @@ export const getPatients = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Lấy danh sách bác sĩ pending
 export const getPendingDoctors = async (req, res) => {
   try {
-    const pendingDoctors = await User.find({ role: "doctor", isApproved: false });
-    res.json(pendingDoctors);
+    const doctors = await User.find({ role: "doctor", isApproved: false }).select("-password");
+    res.json(doctors);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+// Từ chối bác sĩ
+export const rejectDoctor = async (req, res) => {
+  try {
+    const doctorId = req.params.id;
+
+    const doctor = await User.findById(doctorId);
+
+    if (!doctor || doctor.role !== "doctor") {
+      return res.status(404).json({ message: "Không tìm thấy bác sĩ" });
+    }
+
+    doctor.isApproved = false;
+    doctor.isActive = false;
+
+    await doctor.save();
+    res.json({ message: "Bác sĩ đã được từ chối thành công", doctor });
   } catch (error) {
-    console.error("Error fetching pending doctors:", error.message);
-    console.error(error.stack); // In chi tiết
-    res.status(500).json({ message: "Không thể lấy danh sách bác sĩ chờ duyệt" });
+    console.error("Error rejecting doctor:", error);
+    res.status(500).json({ message: "Không thể từ chối bác sĩ" });
   }
 };
 // Duyệt bác sĩ
@@ -231,8 +251,9 @@ export const approveDoctor = async (req, res) => {
     }
 
     doctor.isApproved = true;
-    await doctor.save();
+    doctor.isActive = true;
 
+    await doctor.save();
     res.json({ message: "Bác sĩ đã được duyệt thành công", doctor });
   } catch (error) {
     console.error("Error approving doctor:", error);

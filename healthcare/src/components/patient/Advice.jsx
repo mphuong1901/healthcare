@@ -31,33 +31,47 @@ useEffect(() => {
   fetchAdvice();
 }, [currentUser, currentPage]);
 
-  const fetchAdvice = async () => {
-    
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await adviceAPI.getAdvices(currentPage, itemsPerPage);
-      console.log("📦 Advice API raw:", response.data);   
+const fetchAdvice = async () => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      if (response.data && response.data.success) {
-        const { advice, pagination } = response.data.data;
-        setAdviceList(advice || []);
-        setTotalPages(pagination?.totalPages || 1);
-        setTotalAdvice(pagination?.total || 0);
-      } else {
-        throw new Error('Không thể tải dữ liệu lời khuyên');
-      }
-    } catch (err) {
-      console.error('Error fetching advice:', err);
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi tải lời khuyên');
-      // Fallback data nếu API không khả dụng
-      setAdviceList([]);
-      setTotalAdvice(0);
-    } finally {
-      setLoading(false);
+    const response = await adviceAPI.getAdvices(currentPage, itemsPerPage);
+    console.log("📦 Advice API raw:", response.data);
+
+    if (response.data && response.data.success) {
+      // ✅ Đảm bảo có mảng, tránh undefined
+      const adviceArray = response.data.data || [];
+      const pagination = response.data.pagination || {};
+
+      const formattedAdvice = adviceArray.map(item => ({
+        ...item,
+        answer: item.answer || {
+          content: null,
+          answeredAt: null,
+          recommendations: [],
+          followUpRequired: false,
+          followUpDate: null
+        }
+      }));
+
+      setAdviceList(formattedAdvice);
+      setTotalPages(pagination.totalPages || 1);
+      setTotalAdvice(pagination.total || 0);
+    } else {
+      throw new Error('Không thể tải dữ liệu lời khuyên');
     }
-  };
+  } catch (err) {
+    console.error('Error fetching advice:', err);
+    setError(err.response?.data?.message || 'Có lỗi xảy ra khi tải lời khuyên');
+    setAdviceList([]);
+    setTotalAdvice(0);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   const categories = {
     all: 'Tất cả',
@@ -228,8 +242,50 @@ useEffect(() => {
               <MessageSquare className="h-5 w-5 text-primary-600" />
             </div>
 
-            <div className="bg-gray-50 rounded-md p-4">
-              <p className="text-gray-700 leading-relaxed">{advice.content}</p>
+            <div className="bg-gray-50 rounded-md p-4 space-y-4">
+  {/* Nội dung câu hỏi / lời khuyên */}
+  <div>
+    <h4 className="text-sm font-medium text-gray-600 mb-1">Câu hỏi của bạn</h4>
+    <p className="text-gray-700 leading-relaxed">{advice.content}</p>
+  </div>
+
+            {/* Trả lời của bác sĩ */}
+            {advice.answer?.content ? (
+              <div className="border-t pt-3">
+                <h4 className="text-sm font-medium text-primary-600 mb-2 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Trả lời từ bác sĩ
+                </h4>
+                <p className="text-gray-800">{advice.answer.content}</p>
+            
+                {/* Khuyến nghị */}
+                {advice.answer.recommendations?.length > 0 && (
+                  <ul className="list-disc list-inside mt-2 text-gray-700">
+                    {advice.answer.recommendations.map((rec, idx) => (
+                      <li key={idx}>{rec}</li>
+                    ))}
+                  </ul>
+                )}
+            
+                {/* Yêu cầu tái khám */}
+                {advice.answer.followUpRequired && (
+                  <div className="mt-3 text-sm text-red-600 font-medium">
+                    ⚠️ Cần tái khám vào ngày {new Date(advice.answer.followUpDate).toLocaleDateString('vi-VN')}
+                  </div>
+                )}
+            
+                {/* Ngày trả lời */}
+                {advice.answer.answeredAt && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Trả lời lúc {new Date(advice.answer.answeredAt).toLocaleString('vi-VN')}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="border-t pt-3 text-sm text-gray-500 italic">
+                Bác sĩ chưa trả lời câu hỏi này
+              </div>
+            )}
             </div>
 
             <div className="mt-4 flex items-center justify-between">
@@ -331,4 +387,3 @@ useEffect(() => {
 };
 
 export default Advice;
-

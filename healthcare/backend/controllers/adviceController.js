@@ -156,6 +156,39 @@ export const getDoctorAdvice = async (req, res) => {
   }
 };
 
+// @desc    Lấy danh sách lời khuyên từ bác sĩ (theo bệnh nhân)
+// @route   GET /api/questions/patient/advice
+// @access  Private/Patient
+export const getPatientAdvice = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const questions = await Question.find({
+      patient: req.user._id,
+      status: 'answered'
+    })
+      .select('title answer doctor createdAt')
+      .populate('doctor', 'fullName specialization')
+      .sort({ 'answer.answeredAt': -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    res.json({
+      success: true,
+      data: questions,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error getPatientAdvice:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 // @desc    Tạo lời khuyên mới
 // @route   POST /api/advice
 // @access  Private/Doctor

@@ -152,30 +152,31 @@ const DoctorHome = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          icon={Users}
+          icon={() => <Users className="w-6 h-6" />}
           color="blue"
           label="Tổng bệnh nhân"
           value={stats.totalPatients}
         />
         <StatCard
-          icon={MessageSquare}
+          icon={() => <MessageSquare className="w-6 h-6" />}
           color="purple"
           label="Câu hỏi mới"
           value={stats.newQuestions}
         />
         <StatCard
-          icon={FileText}
+          icon={() => <FileText className="w-6 h-6" />}
           color="green"
           label="Báo cáo chờ"
           value={stats.pendingReports}
         />
         <StatCard
-          icon={Calendar}
+          icon={() => <Calendar className="w-6 h-6" />}
           color="orange"
           label="Lịch hẹn hôm nay"
           value={stats.todayAppointments}
         />
       </div>
+
 
       {/* Recent Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

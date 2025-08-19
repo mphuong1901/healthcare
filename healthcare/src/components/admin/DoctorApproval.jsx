@@ -32,7 +32,7 @@ const DoctorApproval = () => {
         setStats({
           pending: response.data.totalPending || 0,
           approved: response.data.approvedThisMonth || 0,
-          rejected: response.data.rejectedThisMonth || 0
+          rejected: response.data.rejectedThisMonth || 0,
         });
         setError(null);
       } catch (err) {
@@ -49,7 +49,7 @@ const DoctorApproval = () => {
 
   const handleApprove = async (doctorId) => {
     try {
-      await userAPI.activateUser(doctorId);
+      await userAPI.approveDoctor(doctorId);
       setPendingDoctors(prev => prev.filter(doc => doc._id !== doctorId));
       toast.success('Đã duyệt tài khoản bác sĩ thành công!');
       // Refresh stats
@@ -67,7 +67,7 @@ const DoctorApproval = () => {
 
   const handleReject = async (doctorId) => {
     try {
-      await userAPI.deactivateUser(doctorId);
+      await userAPI.rejectDoctor(doctorId);
       setPendingDoctors(prev => prev.filter(doc => doc._id !== doctorId));
       toast.success('Đã từ chối tài khoản bác sĩ!');
       // Refresh stats
